@@ -1,6 +1,7 @@
 require 'capybara'
 require 'capybara/server'
-require 'rack/handler/thin'
+require 'rack/handler/thin' if RUBY_PLATFORM != 'java'
+require 'rack/handler/puma' if RUBY_PLATFORM == 'java'
 
 class FakeBraintree::Server
   def boot
@@ -16,7 +17,11 @@ class FakeBraintree::Server
   def with_thin_runner
     default_server_process = Capybara.server
     Capybara.server do |app, port|
-      Rack::Handler::Thin.run(app, :Port => port)
+      if RUBY_PLATFORM == 'java'
+        Rack::Handler::Puma.run(app, :Port => port)
+      else
+        Rack::Handler::Thin.run(app, :Port => port)
+      end
     end
     yield
   ensure
